@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Empornium - Download Forum Thread Images
 // @namespace    https://github.com/LenAnderson/
-// @downloadURL  https://github.com/LenAnderson/Empornium-Download-Forum-Thread-Images/raw/master/empornium_download_forum_thread_images.user.js
+// @downloadURL  https://github.com/LenAnderson/Empornium-Download-Forum-Thread-Images/raw/main/empornium_download_forum_thread_images.user.js
 // @version      1.0
 // @description  Download all images posted in a forum thread on empornum.me
 // @author       LenAnderson
