@@ -2,7 +2,7 @@
 // @name         Empornium - Download Forum Thread Images
 // @namespace    https://github.com/LenAnderson/
 // @downloadURL  https://github.com/LenAnderson/Empornium-Download-Forum-Thread-Images/raw/main/empornium_download_forum_thread_images.user.js
-// @version      1.0
+// @version      1.1
 // @description  Download all images posted in a forum thread on empornum.me
 // @author       LenAnderson
 // @match        https://www.empornium.me/forum/thread/*
@@ -76,7 +76,7 @@
 
     const init = ()=>{
 		log('init');
-		const linkbox = Array.from(document.querySelectorAll('.linkbox')).filter(it=>!it.classList.contains('pager')&&!it.previousElementSibling.classList.contains('linkbox'));
+		const linkbox = Array.from(document.querySelectorAll('.linkbox')).filter(it=>!it.classList.contains('pager')&&!it.nextElementSibling.classList.contains('linkbox'));
 		linkbox.forEach(lb=>{
 			lb.appendChild(document.createTextNode('\u00A0['));
 			const link = document.createElement('a'); {
