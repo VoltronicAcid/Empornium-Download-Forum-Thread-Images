@@ -53,8 +53,7 @@
 			}
 			imgs = imgs.filter((it,idx)=>imgs.indexOf(it)==idx);
 			log(imgs);
-			//TODO remove:
-			imgs = imgs.slice(0,2);
+
 			const title = document.title.replace(/^.+ > ([^>]+) :: Empornium/, '$1');
 			imgs.forEach((img,idx)=>{
 				GM_download(img, `${title}_${idx}`);
