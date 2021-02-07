@@ -45,7 +45,7 @@
 		if (Number.isInteger(threadId)) {
 			// Determine the number of pages in the thread.
 			let lastPageNo = 1;
-			const pager_linkbox = document.getElementsByClassName('linkbox pager');
+			const pager_linkbox = document.getElementsByClassName('linkbox pager')[0];
 			// const lastLink = document.querySelector('.pager_last');
 			const last_link = pager_linkbox.querySelector('.pager_last');
 
