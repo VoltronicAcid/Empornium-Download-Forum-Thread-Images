@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         Empornium - Download Forum Thread Images
-// @namespace    https://github.com/LenAnderson/
-// @downloadURL  https://github.com/LenAnderson/Empornium-Download-Forum-Thread-Images/raw/main/empornium_download_forum_thread_images.user.js
-// @version      1.1
+// @namespace    https://github.com/VoltronicAcid/
+// @downloadURL  https://github.com/VoltronicAcid/Empornium-Download-Forum-Thread-Images/raw/main/empornium_download_forum_thread_images.user.js
+// @version      1.1.1
 // @description  Download all images posted in a forum thread on empornum.me
 // @author       LenAnderson
 // @match        https://www.empornium.me/forum/thread/*
@@ -27,6 +27,7 @@
 			xhr.send();
 		});
 	};
+
 	const getHtml = (url) => {
 		return get(url).then(txt=>{
 			const html = document.createElement('div');
@@ -40,13 +41,23 @@
 
 	const downloadImages = async()=>{
 		log('downloadImages');
-		const threadId = Number(document.location.href.replace(/^.*\/forum\/thread\/(\d+).*$/, '$1'));
-		if (!isNaN(threadId)) {
+		const threadId = parseInt(document.location.href.replace(/^.*\/forum\/thread\/(\d+).*$/, '$1'), 10);
+		if (Number.isInteger(threadId)) {
+			// Determine the number of pages in the thread.
 			let lastPageNo = 1;
-			const lastLink = document.querySelector('.pager_last');
-			if (lastLink) {
+			const pager_linkbox = document.getElementsByClassName('linkbox pager');
+			// const lastLink = document.querySelector('.pager_last');
+			const last_link = pager_linkbox.querySelector('.pager_last');
+
+			if (last_link === null) {
+				lastPageNo = document.location.href.indexOf('page=') > -1 ? document.location.href.replace(/^.*\?page=(\d+).*$/, '$1') : '1' ;
+			} else {
 				lastPageNo = lastLink.href.replace(/^.*\?page=(\d+).*$/, '$1');
 			}
+			lastPageNo = parseInt(lastPageNo, 10);
+			// if (lastLink) {
+			// 	lastPageNo = lastLink.href.replace(/^.*\?page=(\d+).*$/, '$1');
+			// }
 			let imgs = [];
 			for (let pageNo = 1; pageNo <= lastPageNo; pageNo++) {
 				imgs.push(...(await collectImagesFromPage(threadId, pageNo)));
