@@ -53,7 +53,7 @@
 			const last_link = first_page.querySelector('.pager_last');
 			// If the linkbox has a 'Last' link, parse 'Last' link for page number
 			if (last_link !== null) {
-				lastPage = last_link.location.href.replace(/^.*\?page=(\d+).*$/, '$1')
+				lastPage = last_link.href.replace(/^.*\?page=(\d+).*$/, '$1')
 			}
 		}
 		const lastPageNo = parseInt(lastPage, 10);
