@@ -59,7 +59,7 @@
 		const lastPageNo = parseInt(lastPage, 10);
 		log(`Downloading media from ${lastPageNo} page${lastPageNo > 1 ? 's' : ''}`);
 		// Iterate over each page and collect the media links
-		for (let page = 1; page < lastPageNo; page++) {
+		for (let page = 1; page <= lastPageNo; page++) {
 			const download_path = `${threadTitle}/page_${page}/`;
 			let images = await collectImagesFromPage(threadId, page);
 			images = [...new Set(images)];
