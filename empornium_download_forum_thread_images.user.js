@@ -43,10 +43,8 @@
 		log('downloadImages');
 		const threadId = parseInt(document.location.href.replace(/^.*\/forum\/thread\/(\d+).*$/, '$1'), 10);
 		if (Number.isInteger(threadId)) {
-			// Determine the number of pages in the thread.
-			let lastPageNo = 1;
+			let lastPageNo = '1';
 			const pager_linkbox = document.getElementsByClassName('linkbox pager')[0];
-			// const lastLink = document.querySelector('.pager_last');
 			const last_link = pager_linkbox.querySelector('.pager_last');
 
 			if (last_link === null) {
@@ -55,20 +53,28 @@
 				lastPageNo = lastLink.href.replace(/^.*\?page=(\d+).*$/, '$1');
 			}
 			lastPageNo = parseInt(lastPageNo, 10);
-			// if (lastLink) {
-			// 	lastPageNo = lastLink.href.replace(/^.*\?page=(\d+).*$/, '$1');
-			// }
+			
 			let imgs = [];
 			for (let pageNo = 1; pageNo <= lastPageNo; pageNo++) {
 				imgs.push(...(await collectImagesFromPage(threadId, pageNo)));
-			}
-			imgs = imgs.filter((it,idx)=>imgs.indexOf(it)==idx);
-			log(imgs);
 
-			const title = document.title.replace(/^.+ > ([^>]+) :: Empornium/, '$1');
-			imgs.forEach((img,idx)=>{
-				GM_download(img, `${title}_${idx}`);
-			});
+				imgs = imgs.filter((it,idx)=>imgs.indexOf(it)==idx);
+				log(imgs);
+
+				const title = document.title.replace(/^.+ > ([^>]+) :: Empornium/, '$1');
+				imgs.forEach((img,idx)=>{
+					GM_download(img, `${title}/page${pageNo}/${idx}`);
+				});
+
+				imgs = [];
+			}
+			// imgs = imgs.filter((it,idx)=>imgs.indexOf(it)==idx);
+			// log(imgs);
+
+			// const title = document.title.replace(/^.+ > ([^>]+) :: Empornium/, '$1');
+			// imgs.forEach((img,idx)=>{
+			// 	GM_download(img, `${title}_${idx}`);
+			// });
 		}
 	};
 
