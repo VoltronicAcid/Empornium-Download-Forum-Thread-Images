@@ -38,13 +38,31 @@
 
 	const wait = async(millis)=>new Promise(resolve=>setTimeout(resolve, millis));
 
+	function slugify (str) {
+		str = str.trim();
+	  
+		// remove accents, swap ñ for n, etc
+		var from = "àáäâèéëêìíïîòóöôùúüûñç·";
+		var to   = "aaaaeeeeiiiioooouuuunc-";
+		for (var i=0, l=from.length ; i<l ; i++) {
+			str = str.replace(new RegExp(from.charAt(i), 'g'), to.charAt(i));
+		}
+	
+		str = str.replace(/[^A-Za-z0-9 \-_]/g, '') // remove invalid chars
+			.replace(/\s+/g, '_') // collapse whitespace and replace by -
+			.replace(/-+/g, '-'); // collapse dashes
+	
+		return str;
+	}
+
 	const downloadImages = async () => {
 		log('downloading Images');
 		let lastPage = '1';
 		// Get thread ID
 		const threadId = parseInt(document.location.href.replace(/^.*\/forum\/thread\/(\d+).*$/, '$1'), 10);
-		const threadTitle = document.title.replace(/^.+ > ([^>]+) :: Empornium/, '$1');
-		
+		let threadTitle = document.title.replace(/^.+ > ([^>]+) :: Empornium/, '$1');
+		threadTitle = slugify(threadTitle);
+
 		// Determine the number of pages in the thread
 		if (Number.isInteger(threadId)){
 			// Get the first page of the thread.
@@ -83,7 +101,7 @@
 			;
 		return imgs.map(it=>it.src);
 	};
-	
+
     const init = ()=>{
 		log('init');
 		const linkbox = Array.from(document.querySelectorAll('.linkbox')).filter(it=>!it.classList.contains('pager')&&!it.nextElementSibling.classList.contains('linkbox'));
