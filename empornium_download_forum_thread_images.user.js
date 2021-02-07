@@ -39,44 +39,77 @@
 
 	const wait = async(millis)=>new Promise(resolve=>setTimeout(resolve, millis));
 
-	const downloadImages = async()=>{
-		log('downloadImages');
+	const downloadImages = async () => {
+		log('downloading Images');
+		let lastPage = '1';
+		// Get thread ID
 		const threadId = parseInt(document.location.href.replace(/^.*\/forum\/thread\/(\d+).*$/, '$1'), 10);
-		if (Number.isInteger(threadId)) {
-			let lastPageNo = '1';
-			const pager_linkbox = document.getElementsByClassName('linkbox pager')[0];
-			const last_link = pager_linkbox.querySelector('.pager_last');
-
-			if (last_link === null) {
-				lastPageNo = document.location.href.indexOf('page=') > -1 ? document.location.href.replace(/^.*\?page=(\d+).*$/, '$1') : '1' ;
-			} else {
-				lastPageNo = lastLink.href.replace(/^.*\?page=(\d+).*$/, '$1');
+		const threadTitle = document.title.replace(/^.+ > ([^>]+) :: Empornium/, '$1');
+		// Determine the number of pages in the thread
+		if (Number.isInteger(threadId)){
+			// Get the first page of the thread.
+			const first_page = await getHtml(`/forum/thread/${threadId}?page=1`);
+			// Search the first page for a 'Last' link
+			const last_link = first_page.querySelector('.pager_last');
+			// If the linkbox has a 'Last' link, parse 'Last' link for page number
+			if (last_link !== null) {
+				lastPage = last_link.location.href.replace(/^.*\?page=(\d+).*$/, '$1')
 			}
-			lastPageNo = parseInt(lastPageNo, 10);
+		}
+		const lastPageNo = parseInt(lastPage, 10);
+		log(`Downloading media from ${lastPageNo} page${lastPageNo > 1 ? 's' : ''}`);
+		// Iterate over each page and collect the media links
+		for (let page = 1; page < lastPageNo; page++) {
+			const download_path = `${threadTitle}/page_${page}/`;
+			let images = await collectImagesFromPage(threadId, page);
+			images = [...new Set(images)];
 			
-			let imgs = [];
-			for (let pageNo = 1; pageNo <= lastPageNo; pageNo++) {
-				imgs.push(...(await collectImagesFromPage(threadId, pageNo)));
-
-				imgs = imgs.filter((it,idx)=>imgs.indexOf(it)==idx);
-				log(imgs);
-
-				const title = document.title.replace(/^.+ > ([^>]+) :: Empornium/, '$1');
-				imgs.forEach((img,idx)=>{
-					GM_download(img, `${title}/page${pageNo}/${idx}`);
-				});
-
-				imgs = [];
+			// Download the media 
+			for (const img of images) {
+                const url_parts = img.split('/');
+                const file_name = url_parts[url_parts.length - 1];
+				GM_download(img, download_path + file_name);
 			}
-			// imgs = imgs.filter((it,idx)=>imgs.indexOf(it)==idx);
-			// log(imgs);
-
-			// const title = document.title.replace(/^.+ > ([^>]+) :: Empornium/, '$1');
-			// imgs.forEach((img,idx)=>{
-			// 	GM_download(img, `${title}_${idx}`);
-			// });
 		}
 	};
+	// const downloadImages = async()=>{
+	// 	log('downloadImages');
+	// 	const threadId = parseInt(document.location.href.replace(/^.*\/forum\/thread\/(\d+).*$/, '$1'), 10);
+	// 	if (Number.isInteger(threadId)) {
+	// 		let lastPageNo = '1';
+	// 		const pager_linkbox = document.getElementsByClassName('linkbox pager')[0];
+	// 		const last_link = pager_linkbox.querySelector('.pager_last');
+
+	// 		if (last_link === null) {
+	// 			lastPageNo = document.location.href.indexOf('page=') > -1 ? document.location.href.replace(/^.*\?page=(\d+).*$/, '$1') : '1' ;
+	// 		} else {
+	// 			lastPageNo = lastLink.href.replace(/^.*\?page=(\d+).*$/, '$1');
+	// 		}
+	// 		lastPageNo = parseInt(lastPageNo, 10);
+			
+	// 		let imgs = [];
+	// 		for (let pageNo = 1; pageNo <= lastPageNo; pageNo++) {
+	// 			imgs.push(...(await collectImagesFromPage(threadId, pageNo)));
+
+	// 			imgs = imgs.filter((it,idx)=>imgs.indexOf(it)==idx);
+	// 			log(imgs);
+
+	// 			const title = document.title.replace(/^.+ > ([^>]+) :: Empornium/, '$1');
+	// 			imgs.forEach((img,idx)=>{
+	// 				GM_download(img, `${title}/page${pageNo}/${idx}`);
+	// 			});
+
+	// 			imgs = [];
+	// 		}
+	// 		// imgs = imgs.filter((it,idx)=>imgs.indexOf(it)==idx);
+	// 		// log(imgs);
+
+	// 		// const title = document.title.replace(/^.+ > ([^>]+) :: Empornium/, '$1');
+	// 		// imgs.forEach((img,idx)=>{
+	// 		// 	GM_download(img, `${title}_${idx}`);
+	// 		// });
+	// 	}
+	// };
 
 	const collectImagesFromPage = async(threadId, pageNo)=>{
 		log('collectImagesFromPage:', threadId, pageNo);
