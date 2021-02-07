@@ -36,7 +36,6 @@
 		});
 	};
 
-
 	const wait = async(millis)=>new Promise(resolve=>setTimeout(resolve, millis));
 
 	const downloadImages = async () => {
@@ -45,6 +44,7 @@
 		// Get thread ID
 		const threadId = parseInt(document.location.href.replace(/^.*\/forum\/thread\/(\d+).*$/, '$1'), 10);
 		const threadTitle = document.title.replace(/^.+ > ([^>]+) :: Empornium/, '$1');
+		
 		// Determine the number of pages in the thread
 		if (Number.isInteger(threadId)){
 			// Get the first page of the thread.
@@ -56,6 +56,7 @@
 				lastPage = last_link.href.replace(/^.*\?page=(\d+).*$/, '$1')
 			}
 		}
+
 		const lastPageNo = parseInt(lastPage, 10);
 		log(`Downloading media from ${lastPageNo} page${lastPageNo > 1 ? 's' : ''}`);
 		// Iterate over each page and collect the media links
@@ -72,44 +73,6 @@
 			}
 		}
 	};
-	// const downloadImages = async()=>{
-	// 	log('downloadImages');
-	// 	const threadId = parseInt(document.location.href.replace(/^.*\/forum\/thread\/(\d+).*$/, '$1'), 10);
-	// 	if (Number.isInteger(threadId)) {
-	// 		let lastPageNo = '1';
-	// 		const pager_linkbox = document.getElementsByClassName('linkbox pager')[0];
-	// 		const last_link = pager_linkbox.querySelector('.pager_last');
-
-	// 		if (last_link === null) {
-	// 			lastPageNo = document.location.href.indexOf('page=') > -1 ? document.location.href.replace(/^.*\?page=(\d+).*$/, '$1') : '1' ;
-	// 		} else {
-	// 			lastPageNo = lastLink.href.replace(/^.*\?page=(\d+).*$/, '$1');
-	// 		}
-	// 		lastPageNo = parseInt(lastPageNo, 10);
-			
-	// 		let imgs = [];
-	// 		for (let pageNo = 1; pageNo <= lastPageNo; pageNo++) {
-	// 			imgs.push(...(await collectImagesFromPage(threadId, pageNo)));
-
-	// 			imgs = imgs.filter((it,idx)=>imgs.indexOf(it)==idx);
-	// 			log(imgs);
-
-	// 			const title = document.title.replace(/^.+ > ([^>]+) :: Empornium/, '$1');
-	// 			imgs.forEach((img,idx)=>{
-	// 				GM_download(img, `${title}/page${pageNo}/${idx}`);
-	// 			});
-
-	// 			imgs = [];
-	// 		}
-	// 		// imgs = imgs.filter((it,idx)=>imgs.indexOf(it)==idx);
-	// 		// log(imgs);
-
-	// 		// const title = document.title.replace(/^.+ > ([^>]+) :: Empornium/, '$1');
-	// 		// imgs.forEach((img,idx)=>{
-	// 		// 	GM_download(img, `${title}_${idx}`);
-	// 		// });
-	// 	}
-	// };
 
 	const collectImagesFromPage = async(threadId, pageNo)=>{
 		log('collectImagesFromPage:', threadId, pageNo);
@@ -120,10 +83,7 @@
 			;
 		return imgs.map(it=>it.src);
 	};
-
-
-
-
+	
     const init = ()=>{
 		log('init');
 		const linkbox = Array.from(document.querySelectorAll('.linkbox')).filter(it=>!it.classList.contains('pager')&&!it.nextElementSibling.classList.contains('linkbox'));
