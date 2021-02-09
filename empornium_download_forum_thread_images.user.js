@@ -9,6 +9,9 @@
 // @grant        GM_download
 // ==/UserScript==
 
+const DEBUG = true;
+const MAX_DOWNLOADS = 5;
+
 (function() {
     'use strict';
 
@@ -99,7 +102,19 @@
 			.filter(it=>!it.closest('blockquote'))
 			.filter(it=>!/^https:\/\/(www\.)?empornium\.([^.\/]+)\/static\/.*/.test(it.src))
 			;
-		return imgs.map(it=>it.src);
+
+		let re = /(\.mp4|\.webm|\.m4v)$/
+		let vids = Array.from(page.querySelectorAll('.post_content a'), a => a.href).filter(link => re.test(link)); 
+		vids = [...new Set(vids)].map(link => link.substring(link.indexOf('?') + 1));
+
+		imgs = imgs.map(it => it.src);
+
+		if (DEBUG) {
+			vids.forEach(link => console.log(link));
+			imgs.forEach(link => console.log(link));
+		}
+		
+		return [...imgs, ...vids];
 	};
 
     const init = ()=>{
