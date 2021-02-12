@@ -3,8 +3,8 @@
 // @namespace    https://github.com/VoltronicAcid/
 // @downloadURL  https://github.com/VoltronicAcid/Empornium-Download-Forum-Thread-Images/raw/refactor/empornium_download_forum_thread_images.user.js
 // @version      0.2
-// @description  Download all images posted in a forum thread on empornum.me
-// @author       LenAnderson
+// @description  Download all images and videos posted in a forum thread on empornum.me
+// @author       VoltronicAcid
 // @match        https://www.empornium.me/forum/thread/*
 // @grant        GM_download
 // ==/UserScript==
