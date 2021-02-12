@@ -10,6 +10,7 @@
 // ==/UserScript==
 
 const DEBUG = true;
+// const VID_EXT = /(\.mp4|\.webm|\.mkv|\.m4v)$/
 
 (async () => {
 	'use strict';
@@ -60,6 +61,7 @@ const DEBUG = true;
 	const getMediaLinks = async (uri, pageCount) => {
 		const media = [];
 		const threadURI = new URL(uri);
+		const hrefs = new Set();
 		for (let idx = 1; idx <= pageCount; idx++) {
 			threadURI.hash = '';
 			threadURI.searchParams.set('page', idx);
@@ -68,16 +70,29 @@ const DEBUG = true;
 			const posts = pageDOM.querySelectorAll('.post_container');
 			posts.forEach(post => {
 				const postId = post.id.substring(7);
-				const imgs = post.querySelectorAll('img.scale_image');
-				if (imgs) {
-					imgs.forEach(img => {
-						const href = img.src ? img.src : img.getAttribute('data-src');
-						media.push({postId, href});
-						console.log(`Page #${idx}`, postId, href);
+				const mediaNodes = post.querySelectorAll('img.scale_image, a');
+				if (mediaNodes) {
+					const re = /(\.mp4|\.webm|\.mkv|\.m4v)$/;
+					mediaNodes.forEach(node => {
+						let href;
+						if (node.nodeName === 'IMG') {
+							href = node.src ? node.src : node.getAttribute('data-src');
+						}
+
+						if (node.nodeName === 'A' && re.test(node.href)) {
+							href = node.href.split('?')[1];
+						}
+
+						if (href && !hrefs.has(href)) {
+							media.push({postId, href});
+							// console.log(`Page #${idx}`, postId, href);
+						}
 					});
 				}
 			});
 		}
+
+		return media;
 	};
 
 	const media = await getMediaLinks(original_uri.href, lastPageNum);
