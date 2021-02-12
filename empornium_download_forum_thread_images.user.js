@@ -19,6 +19,14 @@ const DEBUG = true;
 	const original_uri = new URL(document.location.href);
 	DEBUG && console.log(original_uri);
 	const threadId = original_uri.pathname.split('/')[3];
+
+	const getPageHTML = async (uri) => {
+		const resp = await fetch(uri);
+		const html = await resp.text();
+
+		return html;
+	};
+
 	const getPageCount = async () => {
 		original_uri.searchParams.forEach((value, varName) => {
 			if (varName !== 'page') {
@@ -27,22 +35,25 @@ const DEBUG = true;
 			}
 		})
 		original_uri.searchParams.set('page', 1);
-		DEBUG && console.log('Updated URI object', original_uri);
-		const resp = await fetch(original_uri.href);
-		const html = await resp.text();
+		// DEBUG && console.log('Updated URI object', original_uri);
+		// const resp = await fetch(original_uri.href);
+		// const html = await resp.text();
+		const html = await getPageHTML(original_uri.href);
+
 		const page1DOM = parser.parseFromString(html, 'text/html');
 		const lastThreadPageLink = page1DOM.querySelector('.linkbox.pager a.pager_last');
+
 		if (!lastThreadPageLink) {
 			DEBUG && console.log('Thread has only 1 page.');
 			return 1;
 		}
 
-		DEBUG && console.log('Last page href', lastThreadPageLink.href);
+		// DEBUG && console.log('Last page href', lastThreadPageLink.href);
 		const lastThreadPageURL = new URL(lastThreadPageLink.href);
-		DEBUG && console.log(lastThreadPageURL);
+		// DEBUG && console.log(lastThreadPageURL);
 		const lastPageNum = lastThreadPageURL.searchParams.get('page');
-		DEBUG && console.log(`Last page Num in function ${lastPageNum}`);
-		
+		// DEBUG && console.log(`Last page Num in function ${lastPageNum}`);
+
 		return Number.parseInt(lastPageNum, 10);
 	};
 	const lastPageNum = await getPageCount();
