@@ -15,16 +15,18 @@ const DEBUG = true;
 	'use strict';
 	console.log('Executing "Download Forum Thread Images"');
 
-	const parser = new DOMParser();
+	// const parser = new DOMParser();
 	const original_uri = new URL(document.location.href);
 	DEBUG && console.log(original_uri);
 	const threadId = original_uri.pathname.split('/')[3];
 
-	const getPageHTML = async (uri) => {
+	const getPageDOM = async (uri) => {
 		const resp = await fetch(uri);
 		const html = await resp.text();
+		const parser = new DOMParser();
+		const dom = parser.parseFromString(html, 'text/html');
 
-		return html;
+		return dom;
 	};
 
 	const getPageCount = async () => {
@@ -36,11 +38,7 @@ const DEBUG = true;
 		})
 		original_uri.searchParams.set('page', 1);
 		// DEBUG && console.log('Updated URI object', original_uri);
-		// const resp = await fetch(original_uri.href);
-		// const html = await resp.text();
-		const html = await getPageHTML(original_uri.href);
-
-		const page1DOM = parser.parseFromString(html, 'text/html');
+		const page1DOM = await getPageDOM(original_uri.href);
 		const lastThreadPageLink = page1DOM.querySelector('.linkbox.pager a.pager_last');
 
 		if (!lastThreadPageLink) {
@@ -58,4 +56,30 @@ const DEBUG = true;
 	};
 	const lastPageNum = await getPageCount();
 	DEBUG && console.log('The last page in the thread is', lastPageNum);
+
+	const getMediaLinks = async (uri, pageCount) => {
+		const media = [];
+		const threadURI = new URL(uri);
+		for (let idx = 1; idx <= pageCount; idx++) {
+			threadURI.hash = '';
+			threadURI.searchParams.set('page', idx);
+			DEBUG && console.log('Media Links', idx, threadURI.href);
+			const pageDOM = await getPageDOM(threadURI.href);
+			const posts = pageDOM.querySelectorAll('.post_container');
+			posts.forEach(post => {
+				const postId = post.id.substring(7);
+				const imgs = post.querySelectorAll('img.scale_image');
+				if (imgs) {
+					imgs.forEach(img => {
+						const href = img.src ? img.src : img.getAttribute('data-src');
+						media.push({postId, href});
+						console.log(`Page #${idx}`, postId, href);
+					});
+				}
+			});
+		}
+	};
+
+	const media = await getMediaLinks(original_uri.href, lastPageNum);
+	DEBUG && console.log(media);
 })();
