@@ -9,11 +9,11 @@
 // @grant        GM_download
 // ==/UserScript==
 
-const DEBUG = true;
+const DEBUG = false;
 
 (async () => {
 	'use strict';
-	console.log('Executing "Download Forum Thread Images"');
+	DEBUG && console.log('Executing "Download Forum Thread Images"');
 
 	const original_uri = new URL(document.location.href);
 	DEBUG && console.log(original_uri);
