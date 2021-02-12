@@ -10,13 +10,11 @@
 // ==/UserScript==
 
 const DEBUG = true;
-// const VID_EXT = /(\.mp4|\.webm|\.mkv|\.m4v)$/
 
 (async () => {
 	'use strict';
 	console.log('Executing "Download Forum Thread Images"');
 
-	// const parser = new DOMParser();
 	const original_uri = new URL(document.location.href);
 	DEBUG && console.log(original_uri);
 	const threadId = original_uri.pathname.split('/')[3];
@@ -38,7 +36,7 @@ const DEBUG = true;
 			}
 		})
 		original_uri.searchParams.set('page', 1);
-		// DEBUG && console.log('Updated URI object', original_uri);
+		DEBUG && console.log('Updated URI object', original_uri);
 		const page1DOM = await getPageDOM(original_uri.href);
 		const lastThreadPageLink = page1DOM.querySelector('.linkbox.pager a.pager_last');
 
@@ -47,49 +45,59 @@ const DEBUG = true;
 			return 1;
 		}
 
-		// DEBUG && console.log('Last page href', lastThreadPageLink.href);
+		DEBUG && console.log('Last page href', lastThreadPageLink.href);
 		const lastThreadPageURL = new URL(lastThreadPageLink.href);
-		// DEBUG && console.log(lastThreadPageURL);
+		DEBUG && console.log(lastThreadPageURL);
 		const lastPageNum = lastThreadPageURL.searchParams.get('page');
-		// DEBUG && console.log(`Last page Num in function ${lastPageNum}`);
+		DEBUG && console.log(`Last page Num in function ${lastPageNum}`);
 
 		return Number.parseInt(lastPageNum, 10);
 	};
 	const lastPageNum = await getPageCount();
 	DEBUG && console.log('The last page in the thread is', lastPageNum);
 
+	const uniqLinks = new Set();
+	const getMediaFromPosts = (posts) => {
+		const mediaLinks = [];
+		posts.forEach(post => {
+			const postId = post.id.substring(7);
+			const mediaNodes = post.querySelectorAll('img.scale_image, a');
+			if (mediaNodes) {
+				const re = /(\.mp4|\.webm|\.mkv|\.m4v)$/;
+				mediaNodes.forEach(node => {
+					let href;
+					if (node.nodeName === 'IMG') {
+						href = node.src ? node.src : node.getAttribute('data-src');
+					}
+
+					if (node.nodeName === 'A' && re.test(node.href)) {
+						href = node.href.split('?')[1];
+					}
+
+					if (href && !uniqLinks.has(href)) {
+						uniqLinks.add(href);
+						mediaLinks.push({postId, href});
+						DEBUG && console.log(postId, href);
+					}
+				});
+			}
+		});
+
+		return mediaLinks;
+	}
+
 	const getMediaLinks = async (uri, pageCount) => {
 		const media = [];
 		const threadURI = new URL(uri);
-		const hrefs = new Set();
 		for (let idx = 1; idx <= pageCount; idx++) {
 			threadURI.hash = '';
 			threadURI.searchParams.set('page', idx);
 			DEBUG && console.log('Media Links', idx, threadURI.href);
 			const pageDOM = await getPageDOM(threadURI.href);
 			const posts = pageDOM.querySelectorAll('.post_container');
-			posts.forEach(post => {
-				const postId = post.id.substring(7);
-				const mediaNodes = post.querySelectorAll('img.scale_image, a');
-				if (mediaNodes) {
-					const re = /(\.mp4|\.webm|\.mkv|\.m4v)$/;
-					mediaNodes.forEach(node => {
-						let href;
-						if (node.nodeName === 'IMG') {
-							href = node.src ? node.src : node.getAttribute('data-src');
-						}
+			const links = getMediaFromPosts(posts);
 
-						if (node.nodeName === 'A' && re.test(node.href)) {
-							href = node.href.split('?')[1];
-						}
-
-						if (href && !hrefs.has(href)) {
-							media.push({postId, href});
-							// console.log(`Page #${idx}`, postId, href);
-						}
-					});
-				}
-			});
+			media.push(...links);
 		}
 
 		return media;
