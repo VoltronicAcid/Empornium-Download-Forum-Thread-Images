@@ -2,7 +2,7 @@
 // @name         Empornium - Download Forum Thread Images
 // @namespace    https://github.com/VoltronicAcid/
 // @downloadURL  https://github.com/VoltronicAcid/Empornium-Download-Forum-Thread-Images/raw/refactor/empornium_download_forum_thread_images.user.js
-// @version      0.2.1
+// @version      0.2.2
 // @description  Download all images and videos posted in a forum thread on empornum.me
 // @author       VoltronicAcid
 // @match        https://www.empornium.me/forum/thread/*
@@ -13,11 +13,15 @@ const DEBUG = false;
 
 (async () => {
 	'use strict';
-	DEBUG && console.log('Executing "Download Forum Thread Images"');
 
-	const original_uri = new URL(document.location.href);
-	DEBUG && console.log(original_uri);
-	const threadId = original_uri.pathname.split('/')[3];
+	const slugify = (text) => {
+		return text.toString()
+					.replace(/\s+/g, '-')           // Replace spaces with -
+					.replace(/[^\w\-]+/g, '')       // Remove all non-word chars
+					.replace(/\-\-+/g, '-')         // Replace multiple - with single -
+					.replace(/^-+/, '')             // Trim - from start of text
+					.replace(/-+$/, '');            // Trim - from end of text
+	};
 
 	const getPageDOM = async (uri) => {
 		const resp = await fetch(uri);
@@ -28,37 +32,30 @@ const DEBUG = false;
 		return dom;
 	};
 
-	const getPageCount = async () => {
-		original_uri.searchParams.forEach((value, varName) => {
-			if (varName !== 'page') {
-				original_uri.searchParams.delete(varName);
-				DEBUG && console.log(`Deleting ${varName} from searchParams`)
-			}
-		})
-		original_uri.searchParams.set('page', 1);
-		DEBUG && console.log('Updated URI object', original_uri);
-		const page1DOM = await getPageDOM(original_uri.href);
-		const lastThreadPageLink = page1DOM.querySelector('.linkbox.pager a.pager_last');
+	const getPageCount = async (baseUri) => {
+		const uri = new URL(baseUri);
 
-		if (!lastThreadPageLink) {
+		uri.searchParams.set('page', 1);
+		DEBUG && console.log('getPageCount - page #1 uri\n', uri);
+		const firstPageDOM = await getPageDOM(uri.href);
+		const pagerLast = firstPageDOM.querySelector('.linkbox.pager a.pager_last');
+
+		if (!pagerLast) {
 			DEBUG && console.log('Thread has only 1 page.');
 			return 1;
 		}
 
-		DEBUG && console.log('Last page href', lastThreadPageLink.href);
-		const lastThreadPageURL = new URL(lastThreadPageLink.href);
-		DEBUG && console.log(lastThreadPageURL);
+		const lastThreadPageURL = new URL(pagerLast.href);
+		DEBUG && console.log('getPageCount - last page uri\n', lastThreadPageURL);
 		const lastPageNum = lastThreadPageURL.searchParams.get('page');
-		DEBUG && console.log(`Last page Num in function ${lastPageNum}`);
 
 		return Number.parseInt(lastPageNum, 10);
 	};
-	const lastPageNum = await getPageCount();
-	DEBUG && console.log('The last page in the thread is', lastPageNum);
 
 	const uniqLinks = new Set();
 	const getMediaFromPosts = (posts) => {
 		const mediaLinks = [];
+		const downloaded = false;
 		posts.forEach(post => {
 			const postId = post.id.substring(7);
 			const mediaNodes = post.querySelectorAll('img.scale_image, a');
@@ -76,7 +73,7 @@ const DEBUG = false;
 
 					if (href && !uniqLinks.has(href)) {
 						uniqLinks.add(href);
-						mediaLinks.push({postId, href});
+						mediaLinks.push({postId, href, downloaded});
 						DEBUG && console.log(postId, href);
 					}
 				});
@@ -103,6 +100,72 @@ const DEBUG = false;
 		return media;
 	};
 
-	const media = await getMediaLinks(original_uri.href, lastPageNum);
-	DEBUG && console.log(media);
+	const saveMediaToDB = (threadId, name, pageNum, posts) => {
+		const db_name = 'empornium';
+		const table_name = 'threads';
+		const openReq = indexedDB.open(db_name, 1);
+
+		// Create db, if needed.
+		openReq.onupgradeneeded = function(evt) {
+			const db = evt.target.result;
+			const schema = {keyPath: 'threadId', autoincrement: false};
+			db.createObjectStore(table_name, schema);
+		};
+
+		// Add to db.
+		openReq.onsuccess = function(evt) {
+			const db = evt.target.result;
+			const read_trnsct = db.transaction(table_name, 'readonly');
+			const readonly_table = read_trnsct.objectStore(table_name);
+			const thread_record = readonly_table.get(threadId);
+			let curr_row;
+			thread_record.onerror = function(evt) {
+				console.log('Thread not in db');
+				console.log(evt.result.target);
+			};
+			thread_record.onsuccess = function(evt) {
+				console.log('Successfully retrieved row.');
+				console.log('Row', evt.target.result);
+				if (evt.target.result) {
+					curr_row = JSON.parse(JSON.stringify(evt.target.result));
+				}
+				
+				const update_trnsct = db.transaction(table_name, 'readwrite');
+				const update_table = update_trnsct.objectStore(table_name);
+				let merged_row;
+				if (!curr_row) {
+					merged_row = {threadId, name, pages: { [pageNum]: posts} };
+				} else {
+					curr_row.pages[pageNum] = posts;
+					merged_row = {threadId, name, pages: curr_row.pages};
+				}
+
+				update_table.put(merged_row);
+			};
+		};
+	};
+
+	const init = async () => {
+		const threadUri = new URL(document.location.href);
+		const threadId = Number.parseInt(threadUri.pathname.split('/')[3], 10);
+		const baseUri = new URL(threadUri.origin + threadUri.pathname);
+		const totalPages = await getPageCount(baseUri.href);
+		const threadTitle = slugify(document.querySelector('h2').innerText.split(' > ')[2]);
+		DEBUG && console.log(`Init Function\nURI\t=\t${threadUri}\nthreadId\t=\t${threadId}\npages=${totalPages}`);
+
+		let totalLinks = 0;
+		for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
+			baseUri.searchParams.set('page', pageNum);
+			const dom = await getPageDOM(baseUri.href);
+			const posts = dom.querySelectorAll('.post_container');
+			const links = getMediaFromPosts(posts);
+			totalLinks += links.length;
+			// console.log(`Page #${pageNum} contains ${links.length} links.`)
+			// console.log(links);
+			saveMediaToDB(threadId, threadTitle, pageNum, links);
+		}
+		// console.log('Total Links', totalLinks);
+	};
+
+	init();
 })();
