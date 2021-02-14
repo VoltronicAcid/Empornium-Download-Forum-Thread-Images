@@ -15,6 +15,7 @@ const DEBUG = false;
 	'use strict';
 	const db_name = 'empornium';
 	const table_name = 'threads';
+	const uniqLinks = new Set();
 
 	const slugify = (text) => {
 		return text.toString()
@@ -54,7 +55,6 @@ const DEBUG = false;
 		return Number.parseInt(lastPageNum, 10);
 	};
 
-	const uniqLinks = new Set();
 	const getMediaFromPosts = (posts) => {
 		const mediaLinks = [];
 		const downloaded = false;
@@ -62,14 +62,16 @@ const DEBUG = false;
 			const postId = post.id.substring(7);
 			const mediaNodes = post.querySelectorAll('img.scale_image, a');
 			if (mediaNodes) {
-				const re = /(\.mp4|\.webm|\.mkv|\.m4v)$/;
+				const re = /(\.mp4|\.webm|\.mkv|\.m4v)$/; // file extensions for video files
 				mediaNodes.forEach(node => {
 					let href;
 					if (node.nodeName === 'IMG') {
+						// Hidden images have store the uri in the 'data-src' attribute
 						href = node.src ? node.src : node.getAttribute('data-src');
 					}
 
 					if (node.nodeName === 'A' && re.test(node.href)) {
+						// Video URLs are prefixed with 'http://anonym.es?'
 						href = node.href.split('?')[1];
 					}
 
@@ -173,13 +175,38 @@ const DEBUG = false;
 
 			retrieveRow.onsuccess = function(evt) {
 				const threadMedia = evt.target.result;
+				if (threadMedia && threadMedia.pages[pageNum]) {
+					console.log(`Links for page #${pageNum}`, threadMedia.pages[pageNum].posts);
+				}
 				
-				return threadMedia && threadMedia.pages[pageNum] ? threadMedia.pages[pageNum] : undefined;
+				return threadMedia ? threadMedia.pages[pageNum] : undefined;
 			}
 		}
 	};
 
+	const addLinkToPage = () => {
+		const linkboxes = document.querySelectorAll('.linkbox:not(.pager)');
+		linkboxes.forEach(box => {
+			const openBrace = document.createTextNode('\u00A0[');	// '&nbsp;['
+			const closeBrace = document.createTextNode(']');
+			const downloadLink = document.createElement('a');
+			downloadLink.href = 'javascript:void(0);';		// prevent scrolling to the top of the page
+			downloadLink.text = 'Download Media';
+			downloadLink.addEventListener('click', (evt) => {
+				evt.stopPropagation();
+				evt.preventDefault();
+
+				console.log('ToDo: Download Media');
+			}, { once: true }); // Only execute the function once
+
+			box.appendChild(openBrace);
+			box.appendChild(downloadLink);
+			box.appendChild(closeBrace);
+		});
+	};
+
 	const init = async () => {
+		addLinkToPage();
 		const threadUri = new URL(document.location.href);
 		const threadId = Number.parseInt(threadUri.pathname.split('/')[3], 10);
 		const baseUri = new URL(threadUri.origin + threadUri.pathname);
@@ -195,16 +222,12 @@ const DEBUG = false;
 			const links = getMediaFromPosts(posts);
 			totalLinks += links.length;
 
+			// Only save pages with media to the db
 			if (links.length) {
 				saveMediaToDB(threadId, threadTitle, pageNum, links);
 			}
 		}
-		console.log('Total Links', totalLinks);
-
-		for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
-			const pageLinks = getMediaForPage(threadId, pageNum);
-			console.log(`Page #${pageNum}\n`, pageLinks);
-		}
+		console.log(`Thread contains ${totalLinks} media links.`);
 	};
 
 	init();
