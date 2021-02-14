@@ -13,6 +13,8 @@ const DEBUG = false;
 
 (async () => {
 	'use strict';
+	const db_name = 'empornium';
+	const table_name = 'threads';
 
 	const slugify = (text) => {
 		return text.toString()
@@ -83,7 +85,7 @@ const DEBUG = false;
 		return mediaLinks;
 	}
 
-	const getMediaLinks = async (uri, pageCount) => {
+	const getAllMediaLinks = async (uri, pageCount) => {
 		const media = [];
 		const threadURI = new URL(uri);
 		for (let idx = 1; idx <= pageCount; idx++) {
@@ -101,8 +103,6 @@ const DEBUG = false;
 	};
 
 	const saveMediaToDB = (threadId, name, pageNum, posts) => {
-		const db_name = 'empornium';
-		const table_name = 'threads';
 		const openReq = indexedDB.open(db_name, 1);
 
 		// Create db, if needed.
@@ -124,8 +124,6 @@ const DEBUG = false;
 				console.log(evt.result.target);
 			};
 			thread_record.onsuccess = function(evt) {
-				console.log('Successfully retrieved row.');
-				console.log('Row', evt.target.result);
 				if (evt.target.result) {
 					curr_row = JSON.parse(JSON.stringify(evt.target.result));
 				}
@@ -134,10 +132,25 @@ const DEBUG = false;
 				const update_table = update_trnsct.objectStore(table_name);
 				let merged_row;
 				if (!curr_row) {
-					merged_row = {threadId, name, pages: { [pageNum]: posts} };
+					merged_row = {
+						threadId, 
+						name, 
+						downloaded: false, 
+						pages: { 
+							[pageNum]: {
+								posts, 
+								downloaded: false
+							} 
+						} 
+					};
 				} else {
-					curr_row.pages[pageNum] = posts;
-					merged_row = {threadId, name, pages: curr_row.pages};
+					const pages = {...curr_row.pages, [pageNum]:{ posts, downloaded: false}}
+					merged_row = {
+						threadId, 
+						name, 
+						downloaded: false, 
+						pages
+					};
 				}
 
 				update_table.put(merged_row);
@@ -160,11 +173,9 @@ const DEBUG = false;
 			const posts = dom.querySelectorAll('.post_container');
 			const links = getMediaFromPosts(posts);
 			totalLinks += links.length;
-			// console.log(`Page #${pageNum} contains ${links.length} links.`)
-			// console.log(links);
 			saveMediaToDB(threadId, threadTitle, pageNum, links);
 		}
-		// console.log('Total Links', totalLinks);
+		console.log('Total Links', totalLinks);
 	};
 
 	init();
