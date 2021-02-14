@@ -17,6 +17,12 @@ const DEBUG = false;
 	const db_name = 'empornium';
 	const table_name = 'threads';
 	const uniqLinks = new Set();
+	const threadUri = new URL(document.location.href);
+	const threadId = Number.parseInt(threadUri.pathname.split('/')[3], 10);
+	const baseUri = new URL(threadUri.origin + threadUri.pathname);
+	let totalPages;
+	let threadTitle;
+	let threadPages;
 
 	const slugify = (text) => {
 		return text.toString()
@@ -192,16 +198,34 @@ const DEBUG = false;
 		return threadMedia ? threadMedia.pages[pageNum] : undefined;
 	}
 
-	const getDownloadFunction = (evt) => {
+	const getDownloadFunction = function (evt) {
 		let count = 1;
-		return function (evt) {
+		return async function (evt) {
 			if (count > 0) {
 				count -= 1;
 				evt.stopPropagation();
 				evt.preventDefault();
-				console.log('ToDo: Download Media');
-				console.log(evt);
-			} 
+
+				let totalLinks = 0;
+				threadPages.forEach((dom, idx) => {
+					const posts = dom.querySelectorAll('.post_container');
+					const links = getMediaFromPosts(posts);
+					totalLinks += links.length;
+					const pageNum = idx + 1;
+
+					// Only save pages with media to the db
+					if (links.length) {
+						console.log(`Saving media from page #${pageNum}`);
+						saveMediaToDB(threadId, threadTitle, pageNum, links);
+					}
+				});
+
+				for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
+					const links = await idbGetPageMedia(threadId, pageNum);
+					console.log(`Page #${pageNum} links\n`, links);
+				}
+				console.log(`Thread contains ${totalLinks} media link${totalLinks !== 1 ? 's' : ''} on ${totalPages} page${totalPages > 1 ? 's' : ''}.`);
+			}
 		};
 	};
 
@@ -226,33 +250,15 @@ const DEBUG = false;
 
 	const init = async () => {
 		addLinkToPage();
-		const threadUri = new URL(document.location.href);
-		const threadId = Number.parseInt(threadUri.pathname.split('/')[3], 10);
-		const baseUri = new URL(threadUri.origin + threadUri.pathname);
-		const totalPages = await getPageCount(baseUri.href);
-		const threadTitle = slugify(document.querySelector('h2').innerText.split(' > ')[2]);
+		totalPages = await getPageCount(baseUri.href);
+		threadTitle = slugify(document.querySelector('h2').innerText.split(' > ')[2]);
 		DEBUG && console.log(`Init Function\nURI\t=\t${threadUri}\nthreadId\t=\t${threadId}\npages=${totalPages}`);
-
-		let totalLinks = 0;
+		threadPages = [];
 		for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
 			baseUri.searchParams.set('page', pageNum);
 			const dom = await getPageDOM(baseUri.href);
-			const posts = dom.querySelectorAll('.post_container');
-			const links = getMediaFromPosts(posts);
-			totalLinks += links.length;
-
-			// Only save pages with media to the db
-			if (links.length) {
-				console.log(`Saving media from page #${pageNum}`)
-				saveMediaToDB(threadId, threadTitle, pageNum, links);
-			}
+			threadPages.push(dom);
 		}
-
-		for (let pageNum = 1; pageNum <= totalPages; pageNum++){
-			const links = await idbGetPageMedia(threadId, pageNum);
-			console.log(`Page #${pageNum} links\n`, links);
-		}
-		console.log(`Thread contains ${totalLinks} media link${totalLinks !== 1 ? 's' : ''} on ${totalPages} page${totalPages > 1 ? 's' : ''}.`);
 	};
 
 	init();
