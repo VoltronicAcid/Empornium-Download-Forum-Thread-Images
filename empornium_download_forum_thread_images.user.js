@@ -192,20 +192,31 @@ const DEBUG = false;
 		return threadMedia ? threadMedia.pages[pageNum] : undefined;
 	}
 
+	const getDownloadFunction = (evt) => {
+		let count = 1;
+		return function (evt) {
+			if (count > 0) {
+				count -= 1;
+				evt.stopPropagation();
+				evt.preventDefault();
+				console.log('ToDo: Download Media');
+				console.log(evt);
+			} 
+		};
+	};
+
 	const addLinkToPage = () => {
 		const linkboxes = document.querySelectorAll('.linkbox:not(.pager)');
+		const downloadFunction = getDownloadFunction();
+
 		linkboxes.forEach(box => {
 			const openBrace = document.createTextNode('\u00A0[');	// '&nbsp;['
 			const closeBrace = document.createTextNode(']');
 			const downloadLink = document.createElement('a');
+
 			downloadLink.href = 'javascript:void(0);';		// prevent scrolling to the top of the page
 			downloadLink.text = 'Download Media';
-			downloadLink.addEventListener('click', (evt) => {
-				evt.stopPropagation();
-				evt.preventDefault();
-
-				console.log('ToDo: Download Media');
-			}, { once: true }); // Only execute the function once
+			downloadLink.addEventListener('click', downloadFunction); // Only execute the function once , { once: true }
 
 			box.appendChild(openBrace);
 			box.appendChild(downloadLink);
@@ -241,7 +252,7 @@ const DEBUG = false;
 			const links = await idbGetPageMedia(threadId, pageNum);
 			console.log(`Page #${pageNum} links\n`, links);
 		}
-		console.log(`Thread contains ${totalLinks} media link${totalLinks > 1 ? 's' : ''} on ${totalPages} page${totalPages > 1 ? 's' : ''}.`);
+		console.log(`Thread contains ${totalLinks} media link${totalLinks !== 1 ? 's' : ''} on ${totalPages} page${totalPages > 1 ? 's' : ''}.`);
 	};
 
 	init();
