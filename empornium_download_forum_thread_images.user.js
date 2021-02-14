@@ -2,6 +2,7 @@
 // @name         Empornium - Download Forum Thread Images
 // @namespace    https://github.com/VoltronicAcid/
 // @downloadURL  https://github.com/VoltronicAcid/Empornium-Download-Forum-Thread-Images/raw/refactor/empornium_download_forum_thread_images.user.js
+// @require      https://unpkg.com/idb/build/iife/index-min.js
 // @version      0.2.2
 // @description  Download all images and videos posted in a forum thread on empornum.me
 // @author       VoltronicAcid
@@ -184,6 +185,13 @@ const DEBUG = false;
 		}
 	};
 
+	const idbGetPageMedia = async (threadId, pageNum) => {
+		const db = await idb.openDB(db_name);
+		const threadMedia = await db.get(table_name, threadId);
+
+		return threadMedia ? threadMedia.pages[pageNum] : undefined;
+	}
+
 	const addLinkToPage = () => {
 		const linkboxes = document.querySelectorAll('.linkbox:not(.pager)');
 		linkboxes.forEach(box => {
@@ -224,10 +232,16 @@ const DEBUG = false;
 
 			// Only save pages with media to the db
 			if (links.length) {
+				console.log(`Saving media from page #${pageNum}`)
 				saveMediaToDB(threadId, threadTitle, pageNum, links);
 			}
 		}
-		console.log(`Thread contains ${totalLinks} media links.`);
+
+		for (let pageNum = 1; pageNum <= totalPages; pageNum++){
+			const links = await idbGetPageMedia(threadId, pageNum);
+			console.log(`Page #${pageNum} links\n`, links);
+		}
+		console.log(`Thread contains ${totalLinks} media link${totalLinks > 1 ? 's' : ''} on ${totalPages} page${totalPages > 1 ? 's' : ''}.`);
 	};
 
 	init();
