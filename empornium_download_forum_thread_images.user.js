@@ -158,6 +158,27 @@ const DEBUG = false;
 		};
 	};
 
+	const getMediaForPage = (threadId, pageNum) => {
+		const openReq = indexedDB.open(db_name, 1);
+
+		openReq.onsuccess = function(evt) {
+			const db = evt.target.result;
+			const readonly_table = db.transaction(table_name, 'readonly').objectStore(table_name);
+			const retrieveRow = readonly_table.get(threadId);
+
+			retrieveRow.onerror = function(evt) {
+				console.log(evt.target.result);
+				return ;
+			}
+
+			retrieveRow.onsuccess = function(evt) {
+				const threadMedia = evt.target.result;
+				
+				return threadMedia && threadMedia.pages[pageNum] ? threadMedia.pages[pageNum] : undefined;
+			}
+		}
+	};
+
 	const init = async () => {
 		const threadUri = new URL(document.location.href);
 		const threadId = Number.parseInt(threadUri.pathname.split('/')[3], 10);
@@ -173,9 +194,17 @@ const DEBUG = false;
 			const posts = dom.querySelectorAll('.post_container');
 			const links = getMediaFromPosts(posts);
 			totalLinks += links.length;
-			saveMediaToDB(threadId, threadTitle, pageNum, links);
+
+			if (links.length) {
+				saveMediaToDB(threadId, threadTitle, pageNum, links);
+			}
 		}
 		console.log('Total Links', totalLinks);
+
+		for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
+			const pageLinks = getMediaForPage(threadId, pageNum);
+			console.log(`Page #${pageNum}\n`, pageLinks);
+		}
 	};
 
 	init();
